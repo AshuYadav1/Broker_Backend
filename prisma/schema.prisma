@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  phoneNumber String   @unique
+  name        String?
+  role        String   @default("USER") // USER, BROKER
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  favorites   Property[] // Relation to properties favorited by user
+}
+
+model Property {
+  id              String   @id @default(uuid())
+  crmId           String?
+  title           String
+  location        String
+  city            String?
+  price           Float
+  type            String   // 'new', 'resale', 'project', 'commercial'
+  videoUrl        String
+  mainVideoUrl    String?
+  thumbnailUrl    String?
+  imageUrls       String[]
+  description     String
+  bedrooms        Int
+  bathrooms       Int
+  area            Float     // areaSqFt
+  phoneNumber     String    // agentPhone
+  whatsappNumber  String    // agentWhatsapp
+  agentName       String?
+  latitude        Float
+  longitude       Float
+  amenities       String[]
+  
+  // Extra details
+  possession      String?
+  parking         String?
+  facing          String?
+  floor           String?
+  builder         String?
+  reraRegistered  Boolean?
+  floorPlanUrl    String?
+  brochureUrl     String?
+  googleMapsUrl   String?
+  searchKeywords  String[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  favoritedBy     User[]
+}
+
+model Admin {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  password    String   // Hashed
+  name        String?
+  role        String   @default("ADMIN")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
