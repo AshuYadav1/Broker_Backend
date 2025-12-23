@@ -11,11 +11,26 @@ const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const property_routes_1 = __importDefault(require("./routes/property.routes"));
 const upload_routes_1 = __importDefault(require("./routes/upload.routes"));
+const dashboard_routes_1 = __importDefault(require("./routes/dashboard.routes"));
+const user_routes_1 = __importDefault(require("./routes/user.routes"));
+const lead_routes_1 = __importDefault(require("./routes/lead.routes"));
+const location_routes_1 = __importDefault(require("./routes/location.routes"));
+const banner_routes_1 = __importDefault(require("./routes/banner.routes"));
 const storage_service_1 = require("./services/storage.service");
 const app = (0, express_1.default)();
+app.set('trust proxy', 1); // Trust Nginx
 const PORT = parseInt(process.env.PORT || '3001', 10);
 // 1. Security Middleware
-app.use((0, helmet_1.default)());
+app.use((0, helmet_1.default)({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com"],
+            connectSrc: ["'self'", "https://cloudflareinsights.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+        },
+    },
+}));
 app.use(express_1.default.json());
 // Rate Limiting
 const limiter = (0, express_rate_limit_1.default)({
@@ -26,8 +41,9 @@ const limiter = (0, express_rate_limit_1.default)({
 });
 app.use(limiter);
 // CORS
+// NOTE: Added crm.royalkey.in to allowed origins
 app.use((0, cors_1.default)({
-    origin: ['https://royalkey.in', 'http://localhost:3000'],
+    origin: ['https://royalkey.in', 'https://crm.royalkey.in', 'http://localhost:3000', 'https://video.royalkey.in'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -35,6 +51,11 @@ app.use((0, cors_1.default)({
 app.use('/auth', auth_routes_1.default);
 app.use('/properties', property_routes_1.default);
 app.use('/upload', upload_routes_1.default);
+app.use('/dashboard', dashboard_routes_1.default);
+app.use('/users', user_routes_1.default);
+app.use('/leads', lead_routes_1.default);
+app.use('/locations', location_routes_1.default);
+app.use('/banners', banner_routes_1.default);
 // 3. Static Files (CDN Optimized)
 const publicDir = path_1.default.join(__dirname, '../public');
 app.use('/media', (req, res, next) => {

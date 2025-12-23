@@ -37,7 +37,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.loginAdmin = exports.registerAdmin = exports.verifyMobileOTP = exports.sendMobileOTP = void 0;
-const msg91 = __importStar(require("../services/msg91.service"));
+const fast2sms = __importStar(require("../services/fast2sms.service"));
 const prisma_1 = __importDefault(require("../prisma"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
@@ -50,7 +50,7 @@ const sendMobileOTP = async (req, res) => {
             res.status(400).json({ error: 'Mobile number required' });
             return;
         }
-        await msg91.sendOTP(mobile);
+        await fast2sms.sendOTP(mobile);
         res.json({ success: true, message: 'OTP sent successfully' });
     }
     catch (error) {
@@ -66,7 +66,7 @@ const verifyMobileOTP = async (req, res) => {
             res.status(400).json({ error: 'Mobile and OTP required' });
             return;
         }
-        const isValid = await msg91.verifyOTP(mobile, otp);
+        const isValid = await fast2sms.verifyOTP(mobile, otp);
         if (!isValid) {
             res.status(400).json({ error: 'Invalid OTP' });
             return;

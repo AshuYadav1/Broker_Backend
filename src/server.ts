@@ -7,13 +7,28 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes';
 import propertyRoutes from './routes/property.routes';
 import uploadRoutes from './routes/upload.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import userRoutes from './routes/user.routes';
+import leadRoutes from './routes/lead.routes';
+import locationRoutes from './routes/location.routes';
+import bannerRoutes from './routes/banner.routes';
 import { checkAndRotateStorage } from './services/storage.service';
 
 const app = express();
+app.set('trust proxy', 1); // Trust Nginx
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // 1. Security Middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com"],
+            connectSrc: ["'self'", "https://cloudflareinsights.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+        },
+    },
+}));
 app.use(express.json());
 
 // Rate Limiting
@@ -26,8 +41,9 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS
+// NOTE: Added crm.royalkey.in to allowed origins
 app.use(cors({
-    origin: ['https://royalkey.in', 'http://localhost:3000'],
+    origin: ['https://royalkey.in', 'https://crm.royalkey.in', 'http://localhost:3000', 'https://video.royalkey.in'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -36,6 +52,11 @@ app.use(cors({
 app.use('/auth', authRoutes);
 app.use('/properties', propertyRoutes);
 app.use('/upload', uploadRoutes);
+app.use('/dashboard', dashboardRoutes);
+app.use('/users', userRoutes);
+app.use('/leads', leadRoutes);
+app.use('/locations', locationRoutes);
+app.use('/banners', bannerRoutes);
 
 // 3. Static Files (CDN Optimized)
 const publicDir = path.join(__dirname, '../public');

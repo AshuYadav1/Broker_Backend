@@ -20,7 +20,6 @@ const processVideoJob = async (job) => {
     return new Promise((resolve, reject) => {
         (0, fluent_ffmpeg_1.default)(inputPath)
             .outputOptions([
-            '-map 0:v:0', '-map 0:a:0',
             '-c:v:0 libx264', '-b:v:0 2800k', '-s:v:0 1280x720',
             '-c:a:0 aac', '-ar 44100', '-b:a:0 128k', // Consistent Audio
             '-g 120', '-keyint_min 120', '-sc_threshold 0', // GOP Alignment (4s @ 30fps)
@@ -29,7 +28,6 @@ const processVideoJob = async (job) => {
         ])
             .output(path_1.default.join(outputDir, '720p.m3u8'))
             .outputOptions([
-            '-map 0:v:0', '-map 0:a:0',
             '-c:v:0 libx264', '-b:v:0 1400k', '-s:v:0 854x480',
             '-c:a:0 aac', '-ar 44100', '-b:a:0 128k',
             '-g 120', '-keyint_min 120', '-sc_threshold 0',

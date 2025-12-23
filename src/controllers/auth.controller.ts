@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as msg91 from '../services/msg91.service';
+import * as fast2sms from '../services/fast2sms.service';
 import prisma from '../prisma';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -16,7 +16,7 @@ export const sendMobileOTP = async (req: Request, res: Response) => {
             return;
         }
 
-        await msg91.sendOTP(mobile);
+        await fast2sms.sendOTP(mobile);
         res.json({ success: true, message: 'OTP sent successfully' });
     } catch (error) {
         // console.error(error);
@@ -32,7 +32,7 @@ export const verifyMobileOTP = async (req: Request, res: Response) => {
             return;
         }
 
-        const isValid = await msg91.verifyOTP(mobile, otp);
+        const isValid = await fast2sms.verifyOTP(mobile, otp);
         if (!isValid) {
             res.status(400).json({ error: 'Invalid OTP' });
             return;
@@ -49,7 +49,7 @@ export const verifyMobileOTP = async (req: Request, res: Response) => {
             isNewUser = true;
         }
 
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
 
         res.json({
             success: true,

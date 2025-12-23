@@ -8,7 +8,7 @@ const check_disk_space_1 = __importDefault(require("check-disk-space"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const prisma_1 = __importDefault(require("../prisma"));
-exports.STORAGE_LIMIT_GB = 90; // Leave 10GB buffer
+exports.STORAGE_LIMIT_GB = 95; // Leave 5GB buffer
 const STORAGE_PATH = path_1.default.join(__dirname, '../../public/videos');
 const checkAndRotateStorage = async () => {
     try {

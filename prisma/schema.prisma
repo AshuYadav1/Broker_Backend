@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -17,7 +18,15 @@ model User {
   role        String   @default("USER") // USER, BROKER
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Profile Details
+  pincode     String?
+  city        String?
+  state       String?
+  address     String?
+
   favorites   Property[] // Relation to properties favorited by user
+  interactions Interaction[]
 }
 
 model Property {
@@ -53,12 +62,14 @@ model Property {
   floorPlanUrl    String?
   brochureUrl     String?
   googleMapsUrl   String?
+  panoramas       Json?         // 360-degree panoramic images
   searchKeywords  String[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   favoritedBy     User[]
+  interactions    Interaction[]
 }
 
 model Admin {
@@ -70,3 +81,54 @@ model Admin {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Interaction {
+  id              String   @id @default(uuid())
+  userId          Int?
+  userName        String?
+  userPhone       String?
+  userLocation    String?
+  interactionType String   // 'enquiry', 'like', 'view', 'call'
+  propertyId      String?
+  propertyTitle   String?
+  message         String?
+  
+  createdAt       DateTime @default(now())
+  
+  user            User?     @relation(fields: [userId], references: [id])
+  property        Property? @relation(fields: [propertyId], references: [id])
+}
+
+model Location {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  priority  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Banner {
+  id        String   @id @default(uuid())
+  title     String
+  subtitle  String
+  imageUrl  String
+  category  String   // 'new', 'resale', 'commercial'
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OTP {
+  id          String   @id @default(uuid())
+  phoneNumber String
+  otp         String
+  expiresAt   DateTime
+  attempts    Int      @default(0)
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([phoneNumber])
+  @@index([expiresAt])
+}
+

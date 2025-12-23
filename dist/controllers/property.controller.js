@@ -65,6 +65,8 @@ const createProperty = async (req, res) => {
         const property = await prisma_1.default.property.create({
             data: {
                 ...data,
+                latitude: data.latitude || 0.0,
+                longitude: data.longitude || 0.0,
                 // Ensure array fields are arrays of strings 
                 // in case they come in differently, though Prisma handles types strictly
             }

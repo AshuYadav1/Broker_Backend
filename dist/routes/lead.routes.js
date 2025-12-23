@@ -34,17 +34,9 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const authController = __importStar(require("../controllers/auth.controller"));
-const validate_middleware_1 = require("../middleware/validate.middleware");
-const auth_schema_1 = require("../schema/auth.schema");
-const ratelimit_middleware_1 = require("../middleware/ratelimit.middleware");
+const leadController = __importStar(require("../controllers/lead.controller"));
+const auth_middleware_1 = require("../middleware/auth.middleware");
 const router = (0, express_1.Router)();
-// Rate Limit: 100 requests per 1 minute
-const authLimiter = (0, ratelimit_middleware_1.rateLimiter)(100, 60, 'auth');
-// Mobile
-router.post('/mobile/send-otp', authLimiter, (0, validate_middleware_1.validate)(auth_schema_1.otpRequestSchema), authController.sendMobileOTP);
-router.post('/mobile/verify-otp', authLimiter, (0, validate_middleware_1.validate)(auth_schema_1.otpVerifySchema), authController.verifyMobileOTP);
-// Admin
-router.post('/admin/login', authLimiter, (0, validate_middleware_1.validate)(auth_schema_1.loginSchema), authController.loginAdmin);
-router.post('/admin/register', authLimiter, (0, validate_middleware_1.validate)(auth_schema_1.loginSchema), authController.registerAdmin); // NOTE: Protect or remove in production
+// Admin only leads
+router.get('/', auth_middleware_1.authenticate, auth_middleware_1.requireAdmin, leadController.getLeads);
 exports.default = router;

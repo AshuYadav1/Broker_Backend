@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# setup_vps.sh
+# Run this script ON THE SERVER to install everything.
+# Usage: sudo ./setup_vps.sh
+
+echo "🚀 Starting VPS Setup for RoyalKey Video Server..."
+
+# 1. Update System
+echo "📦 Updating system packages..."
+apt-get update && apt-get upgrade -y
+
+# 2. Install Essentials
+echo "🛠 Installing essential tools..."
+apt-get install -y curl git ufw build-essential libssl-dev rsync ffmpeg
+
+# 3. Install Node.js (v20 LTS)
+echo "🟢 Installing Node.js..."
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs
+
+# 4. Install Redis & Postgres
+echo "🔴 Installing Redis & Postgres..."
+apt-get install -y redis-server postgresql postgresql-contrib
+systemctl enable redis-server
+systemctl start redis-server
+systemctl enable postgresql
+systemctl start postgresql
+
+# 5. Install Nginx
+echo "🌐 Installing Nginx..."
+apt-get install -y nginx
+systemctl enable nginx
+
+# 6. Install Certbot (SSL)
+echo "🔒 Installing Certbot..."
+apt-get install -y certbot python3-certbot-nginx
+
+# 7. Install PM2 (Process Manager)
+echo "⚙️ Installing PM2..."
+npm install -g pm2
+
+# 8. Configure Firewall
+echo "🔥 Configuring Firewall..."
+ufw allow OpenSSH
+ufw allow 'Nginx Full'
+# ufw enable # Uncomment to enable (careful not to lock yourself out!)
+
+# 9. Create App Directory
+echo "📂 Creating app directory..."
+mkdir -p /var/www/video-server
+chown -R $USER:$USER /var/www/video-server
+
+echo "✅ VPS Setup Complete! You can now deploy the code."
