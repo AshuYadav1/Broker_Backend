@@ -26,6 +26,10 @@ rsync -avz --delete \
   --exclude '.git' \
   --exclude 'uploads' \
   --exclude '.env' \
+  --exclude 'public/videos' \
+  --exclude 'public/images' \
+  --exclude 'public/documents' \
+  --exclude 'logs' \
   ./ "$VPS_USER@$VPS_IP:$APP_DIR"
 # .env is EXCLUDED to prevent overwriting server-side DB connection and secrets!
 
