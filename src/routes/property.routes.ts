@@ -17,7 +17,11 @@ router.get('/', publicLimiter, propertyController.getProperties);
 router.get('/:id', publicLimiter, propertyController.getProperty);
 
 // User Protected
+router.post('/interactions', authenticate, propertyController.recordInteraction);
 router.post('/:id/favorite', authenticate, propertyController.toggleFavorite);
+
+// Public Settings
+router.get('/settings/:key', propertyController.getSetting);
 
 // Admin Protected
 router.post('/', requireAdmin, validate(createPropertySchema), propertyController.createProperty);

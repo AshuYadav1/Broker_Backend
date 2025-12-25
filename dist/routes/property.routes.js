@@ -46,7 +46,10 @@ const publicLimiter = (0, ratelimit_middleware_1.rateLimiter)(100, 60, 'property
 router.get('/', publicLimiter, propertyController.getProperties);
 router.get('/:id', publicLimiter, propertyController.getProperty);
 // User Protected
+router.post('/interactions', auth_middleware_1.authenticate, propertyController.recordInteraction);
 router.post('/:id/favorite', auth_middleware_1.authenticate, propertyController.toggleFavorite);
+// Public Settings
+router.get('/settings/:key', propertyController.getSetting);
 // Admin Protected
 router.post('/', auth_middleware_1.requireAdmin, (0, validate_middleware_1.validate)(property_schema_1.createPropertySchema), propertyController.createProperty);
 router.put('/:id', auth_middleware_1.requireAdmin, propertyController.updateProperty);

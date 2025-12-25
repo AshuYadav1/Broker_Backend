@@ -88,15 +88,23 @@ model Interaction {
   userName        String?
   userPhone       String?
   userLocation    String?
-  interactionType String   // 'enquiry', 'like', 'view', 'call'
+  interactionType String   // 'enquiry', 'like', 'view', 'call', 'search', 'share'
   propertyId      String?
   propertyTitle   String?
   message         String?
+  details         Json?    // For flexible tracking data
   
   createdAt       DateTime @default(now())
   
   user            User?     @relation(fields: [userId], references: [id])
   property        Property? @relation(fields: [propertyId], references: [id])
+}
+
+model Setting {
+  id        String   @id @default("global")
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
 }
 
 model Location {

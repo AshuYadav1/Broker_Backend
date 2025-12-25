@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUsers = void 0;
+exports.updateProfile = exports.getProfile = exports.getUsers = void 0;
 const prisma_1 = __importDefault(require("../prisma"));
 const getUsers = async (req, res) => {
     try {
@@ -40,3 +40,51 @@ const getUsers = async (req, res) => {
     }
 };
 exports.getUsers = getUsers;
+const getProfile = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+        const user = await prisma_1.default.user.findUnique({
+            where: { id: parseInt(userId) }
+        });
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+        res.json({ success: true, user });
+    }
+    catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+exports.getProfile = getProfile;
+const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const { name, pincode, city, state, address } = req.body;
+        if (!userId) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+        const updatedUser = await prisma_1.default.user.update({
+            where: { id: parseInt(userId) },
+            data: {
+                name,
+                pincode,
+                city,
+                state,
+                address
+            }
+        });
+        res.json({ success: true, user: updatedUser });
+    }
+    catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+};
+exports.updateProfile = updateProfile;

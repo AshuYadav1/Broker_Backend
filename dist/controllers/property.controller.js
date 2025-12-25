@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.toggleFavorite = exports.deleteProperty = exports.updateProperty = exports.createProperty = exports.getProperty = exports.getProperties = void 0;
+exports.toggleFavorite = exports.getSetting = exports.recordInteraction = exports.deleteProperty = exports.updateProperty = exports.createProperty = exports.getProperty = exports.getProperties = void 0;
 const prisma_1 = __importDefault(require("../prisma"));
 // Helper for pagination/filtering
 const getProperties = async (req, res) => {
@@ -107,6 +107,43 @@ const deleteProperty = async (req, res) => {
     }
 };
 exports.deleteProperty = deleteProperty;
+const recordInteraction = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const { interactionType, propertyId, propertyTitle, message, details } = req.body;
+        const user = userId ? await prisma_1.default.user.findUnique({ where: { id: userId } }) : null;
+        const interaction = await prisma_1.default.interaction.create({
+            data: {
+                userId,
+                userName: user?.name,
+                userPhone: user?.phoneNumber,
+                userLocation: user?.city,
+                interactionType,
+                propertyId,
+                propertyTitle,
+                message,
+                details
+            }
+        });
+        res.json({ success: true, data: interaction });
+    }
+    catch (error) {
+        console.error('Record interaction error:', error);
+        res.status(500).json({ error: 'Failed to record interaction' });
+    }
+};
+exports.recordInteraction = recordInteraction;
+const getSetting = async (req, res) => {
+    try {
+        const { key } = req.params;
+        const setting = await prisma_1.default.setting.findUnique({ where: { key } });
+        res.json({ success: true, data: setting ? setting.value : null });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+exports.getSetting = getSetting;
 const toggleFavorite = async (req, res) => {
     try {
         const userId = req.user?.id;

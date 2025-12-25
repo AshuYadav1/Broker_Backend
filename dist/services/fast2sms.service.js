@@ -12,13 +12,14 @@ const SENDER_ID = process.env.FAST2SMS_SENDER_ID;
 const TEMPLATE_ID = process.env.FAST2SMS_TEMPLATE_ID;
 const ENTITY_ID = process.env.FAST2SMS_ENTITY_ID;
 const TEMPLATE_MESSAGE = process.env.FAST2SMS_TEMPLATE_MESSAGE;
-const OTP_EXPIRY_MINUTES = 10;
+const OTP_EXPIRY_MINUTES = 5;
 const MAX_VERIFICATION_ATTEMPTS = 3;
+const crypto_1 = __importDefault(require("crypto"));
 /**
- * Generate a random 6-digit OTP
+ * Generate a random 6-digit OTP (Cryptographically Secure)
  */
 const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return crypto_1.default.randomInt(100000, 1000000).toString();
 };
 /**
  * Clean up expired OTPs from database
@@ -42,8 +43,10 @@ const cleanupExpiredOTPs = async () => {
  * @param mobile - Phone number (10 digits)
  */
 const sendOTP = async (mobile) => {
-    if (!API_KEY || !SENDER_ID || !TEMPLATE_ID || !ENTITY_ID || !TEMPLATE_MESSAGE) {
-        throw new Error('Fast2SMS configuration missing. Please check environment variables.');
+    // Note: User clarified 'message' parameter must be the 6-digit internal Message ID
+    // We reuse TEMPLATE_ID from env as this Message ID.
+    if (!API_KEY || !SENDER_ID || !TEMPLATE_ID) {
+        throw new Error('Fast2SMS configuration missing (API_KEY, SENDER_ID, or TEMPLATE_ID). Please check environment variables.');
     }
     try {
         // Clean up expired OTPs first
@@ -64,20 +67,26 @@ const sendOTP = async (mobile) => {
                 expiresAt: expiresAt
             }
         });
-        // Prepare message by replacing {#var#} with actual OTP
-        const message = TEMPLATE_MESSAGE.replace('{#var#}', otp);
-        // Send OTP via Fast2SMS DLT Manual API
-        const response = await axios_1.default.get(FAST2SMS_BASE_URL, {
-            params: {
-                authorization: API_KEY,
-                route: 'dlt_manual',
-                sender_id: SENDER_ID,
-                message: message,
-                template_id: TEMPLATE_ID,
-                entity_id: ENTITY_ID,
-                numbers: mobile
-            }
+        // Send OTP via Fast2SMS DLT API
+        // Per User instruction: 'message' parameter must be the internal 6-digit ID (e.g. 205456)
+        const params = {
+            authorization: API_KEY,
+            route: 'dlt',
+            sender_id: SENDER_ID,
+            message: TEMPLATE_ID,
+            variables_values: otp,
+            flash: '0',
+            numbers: mobile
+        };
+        // Add Entity ID if provided (User's latest sample URL didn't have it, but it's often required for DLT)
+        if (ENTITY_ID) {
+            params.entity_id = ENTITY_ID;
+        }
+        console.log('Sending Fast2SMS Request (DLT) with params:', {
+            ...params,
+            authorization: '***' // Hide API key in logs
         });
+        const response = await axios_1.default.get(FAST2SMS_BASE_URL, { params });
         console.log('Fast2SMS Response:', response.data);
         if (response.data.return === false) {
             throw new Error(response.data.message || 'Failed to send OTP via Fast2SMS');

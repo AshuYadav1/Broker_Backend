@@ -11,6 +11,7 @@ const router = Router();
 router.get('/', authenticate, requireAdmin, userController.getUsers);
 
 // User profile
+router.get('/profile', authenticate, userController.getProfile);
 router.put('/profile', authenticate, validate(profileUpdateSchema), userController.updateProfile);
 
 export default router;

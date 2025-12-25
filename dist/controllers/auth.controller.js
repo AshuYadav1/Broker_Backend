@@ -80,7 +80,7 @@ const verifyMobileOTP = async (req, res) => {
             });
             isNewUser = true;
         }
-        const token = jsonwebtoken_1.default.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+        const token = jsonwebtoken_1.default.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
         res.json({
             success: true,
             token,

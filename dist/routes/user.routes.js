@@ -36,7 +36,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const userController = __importStar(require("../controllers/user.controller"));
 const auth_middleware_1 = require("../middleware/auth.middleware");
+const auth_schema_1 = require("../schema/auth.schema");
+const validate_middleware_1 = require("../middleware/validate.middleware");
 const router = (0, express_1.Router)();
 // Admin only users
 router.get('/', auth_middleware_1.authenticate, auth_middleware_1.requireAdmin, userController.getUsers);
+// User profile
+router.get('/profile', auth_middleware_1.authenticate, userController.getProfile);
+router.put('/profile', auth_middleware_1.authenticate, (0, validate_middleware_1.validate)(auth_schema_1.profileUpdateSchema), userController.updateProfile);
 exports.default = router;

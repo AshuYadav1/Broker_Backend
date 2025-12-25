@@ -37,6 +37,30 @@ export const getUsers = async (req: Request, res: Response) => {
     }
 };
 
+export const getProfile = async (req: any, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: parseInt(userId) }
+        });
+
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        res.json({ success: true, user });
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 export const updateProfile = async (req: any, res: Response) => {
     try {
         const userId = req.user?.id;

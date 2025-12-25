@@ -27,7 +27,7 @@ rsync -avz --delete \
   --exclude 'uploads' \
   --exclude '.env' \
   ./ "$VPS_USER@$VPS_IP:$APP_DIR"
-# Removed --exclude '.env' so your local config copies over!
+# .env is EXCLUDED to prevent overwriting server-side DB connection and secrets!
 
 # 3. Remote Commands
 echo "🔄 Running remote setup..."

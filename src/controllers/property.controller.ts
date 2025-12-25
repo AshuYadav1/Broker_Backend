@@ -107,6 +107,44 @@ export const deleteProperty = async (req: Request, res: Response) => {
     }
 };
 
+export const recordInteraction = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        const { interactionType, propertyId, propertyTitle, message, details } = req.body;
+
+        const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+
+        const interaction = await prisma.interaction.create({
+            data: {
+                userId,
+                userName: user?.name,
+                userPhone: user?.phoneNumber,
+                userLocation: user?.city,
+                interactionType,
+                propertyId,
+                propertyTitle,
+                message,
+                details
+            }
+        });
+
+        res.json({ success: true, data: interaction });
+    } catch (error) {
+        console.error('Record interaction error:', error);
+        res.status(500).json({ error: 'Failed to record interaction' });
+    }
+};
+
+export const getSetting = async (req: Request, res: Response) => {
+    try {
+        const { key } = req.params;
+        const setting = await prisma.setting.findUnique({ where: { key } });
+        res.json({ success: true, data: setting ? setting.value : null });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 export const toggleFavorite = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;

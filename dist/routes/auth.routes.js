@@ -39,10 +39,12 @@ const validate_middleware_1 = require("../middleware/validate.middleware");
 const auth_schema_1 = require("../schema/auth.schema");
 const ratelimit_middleware_1 = require("../middleware/ratelimit.middleware");
 const router = (0, express_1.Router)();
-// Rate Limit: 100 requests per 1 minute
-const authLimiter = (0, ratelimit_middleware_1.rateLimiter)(100, 60, 'auth');
+// Rate Limit: General Auth (100 req per 15 min)
+const authLimiter = (0, ratelimit_middleware_1.rateLimiter)(100, 15 * 60, 'auth');
+// Rate Limit: Critical SMS/OTP (5 req per 15 min per IP) - Prevents SMS Flooding/Budget Drain
+const otpLimiter = (0, ratelimit_middleware_1.rateLimiter)(5, 15 * 60, 'otp_critical');
 // Mobile
-router.post('/mobile/send-otp', authLimiter, (0, validate_middleware_1.validate)(auth_schema_1.otpRequestSchema), authController.sendMobileOTP);
+router.post('/mobile/send-otp', otpLimiter, (0, validate_middleware_1.validate)(auth_schema_1.otpRequestSchema), authController.sendMobileOTP);
 router.post('/mobile/verify-otp', authLimiter, (0, validate_middleware_1.validate)(auth_schema_1.otpVerifySchema), authController.verifyMobileOTP);
 // Admin
 router.post('/admin/login', authLimiter, (0, validate_middleware_1.validate)(auth_schema_1.loginSchema), authController.loginAdmin);
