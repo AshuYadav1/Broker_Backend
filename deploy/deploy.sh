@@ -44,8 +44,8 @@ ssh "$VPS_USER@$VPS_IP" << 'EOF'
   # Generate Prisma Client (Ensure Linux binary)
   npx prisma generate
 
-  # Run DB Migrations
-  npx prisma migrate deploy
+  # Run DB Schema Sync (Using db push as migrations are not used)
+  npx prisma db push --accept-data-loss
 
   # Restart PM2 (Server + Worker)
   pm2 reload video-server || pm2 start dist/server.js --name video-server
