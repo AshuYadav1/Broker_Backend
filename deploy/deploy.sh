@@ -13,7 +13,7 @@ echo "🚀 Deploying to $VPS_IP..."
 
 # 1. Build TypeScript
 echo "🔨 Building TypeScript..."
-npx prisma generate
+npm exec prisma generate
 npm run build
 
 # 2. Sync Files
@@ -46,10 +46,10 @@ ssh "$VPS_USER@$VPS_IP" << 'EOF'
   npm install --omit=dev
 
   # Generate Prisma Client (Ensure Linux binary)
-  npx prisma generate
+  npm exec prisma generate
 
   # Run DB Schema Sync (Using db push as migrations are not used)
-  npx prisma db push --accept-data-loss
+  npm exec prisma db push --accept-data-loss
 
   # Restart PM2 (Server + Worker)
   pm2 reload video-server || pm2 start dist/server.js --name video-server
@@ -63,8 +63,8 @@ ssh "$VPS_USER@$VPS_IP" << 'EOF'
   # Assuming certbot config is preserved or we rely on user to re-run certbot if needed.
   # BETTER: Only copy if user approves. But user asked for fix.
   # Let's enable it but warn.
-  # sudo cp deploy/nginx.conf /etc/nginx/nginx.conf
-  # sudo service nginx reload
+  sudo cp deploy/nginx.conf /etc/nginx/nginx.conf
+  sudo service nginx reload
 EOF
 
 echo "✅ Deployment Successful!"
