@@ -65,20 +65,14 @@ exports.getProfile = getProfile;
 const updateProfile = async (req, res) => {
     try {
         const userId = req.user?.id;
-        const { name, pincode, city, state, address } = req.body;
+        const { name } = req.body;
         if (!userId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
         const updatedUser = await prisma_1.default.user.update({
             where: { id: parseInt(userId) },
-            data: {
-                name,
-                pincode,
-                city,
-                state,
-                address
-            }
+            data: { name }
         });
         res.json({ success: true, user: updatedUser });
     }

@@ -117,7 +117,6 @@ const recordInteraction = async (req, res) => {
                 userId,
                 userName: user?.name,
                 userPhone: user?.phoneNumber,
-                userLocation: user?.city,
                 interactionType,
                 propertyId,
                 propertyTitle,
