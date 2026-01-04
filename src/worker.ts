@@ -19,27 +19,60 @@ const processVideoJob = async (job: Job) => {
     return new Promise((resolve, reject) => {
         ffmpeg(inputPath)
             .outputOptions([
-                '-c:v:0 libx264', '-b:v:0 2800k', '-s:v:0 1280x720',
-                '-c:a:0 aac', '-ar 44100', '-b:a:0 128k', // Consistent Audio
-                '-g 120', '-keyint_min 120', '-sc_threshold 0', // GOP Alignment (4s @ 30fps)
-                '-hls_time 4', '-hls_playlist_type vod',
+                '-c:v libx264', '-b:v 5000k', // 5Mbps for 1080p (HQ)
+                '-r 30', // Force 30fps for consistent GOP
+                '-vf', 'scale=w=if(gt(iw\\,ih)\\,-2\\,1080):h=if(gt(iw\\,ih)\\,1080\\,-2)', // Escaped commas for ffmpeg
+                '-c:a aac', '-ar 44100', '-b:a 192k',
+                '-g 60', '-keyint_min 60', '-sc_threshold 0', // GOP = 2s
+                '-hls_time 2', '-hls_playlist_type vod',
+                '-hls_segment_filename', path.join(outputDir, '1080p_%03d.ts')
+            ])
+            .output(path.join(outputDir, '1080p.m3u8'))
+            .outputOptions([
+                '-c:v libx264', '-b:v 2500k', // 2.5Mbps for 720p (Medium)
+                '-r 30',
+                '-vf', 'scale=w=if(gt(iw\\,ih)\\,-2\\,720):h=if(gt(iw\\,ih)\\,720\\,-2)',
+                '-c:a aac', '-ar 44100', '-b:a 128k',
+                '-g 60', '-keyint_min 60', '-sc_threshold 0',
+                '-hls_time 2', '-hls_playlist_type vod',
                 '-hls_segment_filename', path.join(outputDir, '720p_%03d.ts')
             ])
             .output(path.join(outputDir, '720p.m3u8'))
             .outputOptions([
-                '-c:v:0 libx264', '-b:v:0 1400k', '-s:v:0 854x480',
-                '-c:a:0 aac', '-ar 44100', '-b:a:0 128k',
-                '-g 120', '-keyint_min 120', '-sc_threshold 0',
-                '-hls_time 4', '-hls_playlist_type vod',
+                '-c:v libx264', '-b:v 1000k', // 1Mbps for 480p (Low/Mobile)
+                '-r 30',
+                '-vf', 'scale=w=if(gt(iw\\,ih)\\,-2\\,480):h=if(gt(iw\\,ih)\\,480\\,-2)',
+                '-c:a aac', '-ar 44100', '-b:a 96k',
+                '-g 60', '-keyint_min 60', '-sc_threshold 0',
+                '-hls_time 2', '-hls_playlist_type vod',
                 '-hls_segment_filename', path.join(outputDir, '480p_%03d.ts')
             ])
             .output(path.join(outputDir, '480p.m3u8'))
             .on('end', () => {
-                const masterContent = `#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=2800000,RESOLUTION=1280x720\n720p.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1400000,RESOLUTION=854x480\n480p.m3u8`;
+                const masterContent = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-STREAM-INF:BANDWIDTH=5000000
+1080p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=2500000
+720p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=1000000
+480p.m3u8`;
                 fs.writeFileSync(masterPlaylistPath, masterContent);
+                console.log(`[Worker] Job ${job.id} Transcoding Complete`);
 
                 // Cleanup input file
                 if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+
+                // Permission Fix: Ensure Nginx can read all generated files
+                try {
+                    fs.chmodSync(outputDir, 0o755);
+                    const files = fs.readdirSync(outputDir);
+                    files.forEach(file => {
+                        fs.chmodSync(path.join(outputDir, file), 0o644);
+                    });
+                } catch (permErr) {
+                    console.error(`[Worker] Failed to set permissions for ${filename}:`, permErr);
+                }
 
                 console.log(`[Worker] Job ${job.id} Complete: ${filename}`);
                 resolve(true);

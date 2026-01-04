@@ -19,12 +19,6 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  // Profile Details
-  pincode     String?
-  city        String?
-  state       String?
-  address     String?
-
   favorites   Property[] // Relation to properties favorited by user
   interactions Interaction[]
 }
@@ -44,7 +38,7 @@ model Property {
   description     String
   bedrooms        Int
   bathrooms       Int
-  area            Float     // areaSqFt
+  area            String    // areaSqFt
   phoneNumber     String    // agentPhone
   whatsappNumber  String    // agentWhatsapp
   agentName       String?
@@ -57,11 +51,12 @@ model Property {
   parking         String?
   facing          String?
   floor           String?
+  totalFloors    String?
   builder         String?
   reraRegistered  Boolean?
-  floorPlanUrl    String?
   brochureUrl     String?
   googleMapsUrl   String?
+  pincode         String?
   panoramas       Json?         // 360-degree panoramic images
   searchKeywords  String[]
 
@@ -87,7 +82,6 @@ model Interaction {
   userId          Int?
   userName        String?
   userPhone       String?
-  userLocation    String?
   interactionType String   // 'enquiry', 'like', 'view', 'call', 'search', 'share'
   propertyId      String?
   propertyTitle   String?

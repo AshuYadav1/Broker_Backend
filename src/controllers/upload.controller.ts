@@ -54,6 +54,7 @@ export const uploadFile = async (req: Request, res: Response) => {
             const outputPath = path.join(imagesDir, outputFilename);
 
             fs.renameSync(inputPath, outputPath);
+            fs.chmodSync(outputPath, 0o644); // Ensure Nginx can read the file
 
             res.json({
                 success: true,
@@ -66,6 +67,7 @@ export const uploadFile = async (req: Request, res: Response) => {
             const outputPath = path.join(docsDir, outputFilename);
 
             fs.renameSync(inputPath, outputPath);
+            fs.chmodSync(outputPath, 0o644); // Ensure Nginx can read the file
 
             res.json({
                 success: true,

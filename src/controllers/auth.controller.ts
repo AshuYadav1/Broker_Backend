@@ -26,7 +26,7 @@ export const sendMobileOTP = async (req: Request, res: Response) => {
 
 export const verifyMobileOTP = async (req: Request, res: Response) => {
     try {
-        const { mobile, otp } = req.body;
+        const { mobile, otp, name } = req.body;
         if (!mobile || !otp) {
             res.status(400).json({ error: 'Mobile and OTP required' });
             return;
@@ -44,9 +44,18 @@ export const verifyMobileOTP = async (req: Request, res: Response) => {
         let isNewUser = false;
         if (!user) {
             user = await prisma.user.create({
-                data: { phoneNumber: mobile }
+                data: {
+                    phoneNumber: mobile,
+                    name: name
+                }
             });
             isNewUser = true;
+        } else if (name && !user.name) {
+            // Update name for existing user if they didn't have one
+            user = await prisma.user.update({
+                where: { id: user.id },
+                data: { name }
+            });
         }
 
         const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });

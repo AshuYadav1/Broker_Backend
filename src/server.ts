@@ -40,8 +40,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS
-// NOTE: Added crm.royalkey.in to allowed origins
+
 app.use(cors({
     origin: ['https://royalkey.in', 'https://crm.royalkey.in', 'http://localhost:3000', 'https://video.royalkey.in'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],

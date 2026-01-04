@@ -58,12 +58,12 @@ ssh "$VPS_USER@$VPS_IP" << 'EOF'
 
   # Reload Nginx
   # WARNING: Do NOT overwrite nginx.conf automatically as it wipes SSL certs!
-  # Use with caution or manually apply changes. 
-  # But since we need to update body size, we must apply it.
-  # Assuming certbot config is preserved or we rely on user to re-run certbot if needed.
-  # BETTER: Only copy if user approves. But user asked for fix.
-  # Let's enable it but warn.
-  sudo cp deploy/nginx.conf /etc/nginx/nginx.conf
+  # sudo cp deploy/nginx.conf /etc/nginx/nginx.conf
+  echo "⚠️ Skipping Nginx Config overwrite to preserve SSL/HTTPS."
+  echo "👉 If you need to update Nginx, edit /etc/nginx/nginx.conf on the server manually."
+  # Fix Permissions for Static Files (Critical for Nginx 404)
+  sudo chmod -R 755 /var/www/video-server/public
+
   sudo service nginx reload
 EOF
 

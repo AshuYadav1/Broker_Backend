@@ -50,6 +50,7 @@ const uploadFile = async (req, res) => {
             const outputFilename = `${filename}${extension}`;
             const outputPath = path_1.default.join(imagesDir, outputFilename);
             fs_1.default.renameSync(inputPath, outputPath);
+            fs_1.default.chmodSync(outputPath, 0o644); // Ensure Nginx can read the file
             res.json({
                 success: true,
                 url: `/media/images/${outputFilename}`,
@@ -60,6 +61,7 @@ const uploadFile = async (req, res) => {
             const outputFilename = `${filename}${extension}`;
             const outputPath = path_1.default.join(docsDir, outputFilename);
             fs_1.default.renameSync(inputPath, outputPath);
+            fs_1.default.chmodSync(outputPath, 0o644); // Ensure Nginx can read the file
             res.json({
                 success: true,
                 url: `/media/documents/${outputFilename}`,
