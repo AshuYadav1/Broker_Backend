@@ -1,6 +1,17 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { redisConnection } from '../config/redis';
+
+const CACHE_TTL = 300; // 5 minutes
+
+// Helper to invalidate property cache
+const invalidatePropertyCache = async () => {
+    const keys = await redisConnection.keys('properties:*');
+    if (keys.length > 0) {
+        await redisConnection.del(keys);
+    }
+};
 
 // Helper for pagination/filtering
 export const getProperties = async (req: Request, res: Response) => {
@@ -15,6 +26,15 @@ export const getProperties = async (req: Request, res: Response) => {
         if (type) where.type = type;
         if (city) where.city = city;
 
+        const cacheKey = `properties:${type || 'all'}:${city || 'all'}:${page}:${limit}`;
+
+        // 1. Try Cache
+        const cachedData = await redisConnection.get(cacheKey);
+        if (cachedData) {
+            res.json(JSON.parse(cachedData));
+            return;
+        }
+
         const [properties, total] = await Promise.all([
             prisma.property.findMany({
                 where,
@@ -25,7 +45,7 @@ export const getProperties = async (req: Request, res: Response) => {
             prisma.property.count({ where })
         ]);
 
-        res.json({
+        const response = {
             success: true,
             data: properties,
             pagination: {
@@ -34,7 +54,12 @@ export const getProperties = async (req: Request, res: Response) => {
                 total,
                 pages: Math.ceil(total / limit)
             }
-        });
+        };
+
+        // 2. Set Cache
+        await redisConnection.setex(cacheKey, CACHE_TTL, JSON.stringify(response));
+
+        res.json(response);
     } catch (error) {
         console.error('Get properties error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -72,6 +97,8 @@ export const createProperty = async (req: Request, res: Response) => {
             }
         });
 
+        await invalidatePropertyCache();
+
         res.json({ success: true, data: property });
     } catch (error) {
         console.error('Create property error:', error);
@@ -89,6 +116,8 @@ export const updateProperty = async (req: Request, res: Response) => {
             data
         });
 
+        await invalidatePropertyCache();
+
         res.json({ success: true, data: property });
     } catch (error) {
         console.error('Update property error:', error);
@@ -100,6 +129,7 @@ export const deleteProperty = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         await prisma.property.delete({ where: { id } });
+        await invalidatePropertyCache();
         res.json({ success: true, message: 'Property deleted' });
     } catch (error) {
         console.error('Delete property error:', error);

@@ -5,6 +5,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.toggleFavorite = exports.getSetting = exports.recordInteraction = exports.deleteProperty = exports.updateProperty = exports.createProperty = exports.getProperty = exports.getProperties = void 0;
 const prisma_1 = __importDefault(require("../prisma"));
+const redis_1 = require("../config/redis");
+const CACHE_TTL = 300; // 5 minutes
+// Helper to invalidate property cache
+const invalidatePropertyCache = async () => {
+    const keys = await redis_1.redisConnection.keys('properties:*');
+    if (keys.length > 0) {
+        await redis_1.redisConnection.del(keys);
+    }
+};
 // Helper for pagination/filtering
 const getProperties = async (req, res) => {
     try {
@@ -17,6 +26,13 @@ const getProperties = async (req, res) => {
             where.type = type;
         if (city)
             where.city = city;
+        const cacheKey = `properties:${type || 'all'}:${city || 'all'}:${page}:${limit}`;
+        // 1. Try Cache
+        const cachedData = await redis_1.redisConnection.get(cacheKey);
+        if (cachedData) {
+            res.json(JSON.parse(cachedData));
+            return;
+        }
         const [properties, total] = await Promise.all([
             prisma_1.default.property.findMany({
                 where,
@@ -26,7 +42,7 @@ const getProperties = async (req, res) => {
             }),
             prisma_1.default.property.count({ where })
         ]);
-        res.json({
+        const response = {
             success: true,
             data: properties,
             pagination: {
@@ -35,7 +51,10 @@ const getProperties = async (req, res) => {
                 total,
                 pages: Math.ceil(total / limit)
             }
-        });
+        };
+        // 2. Set Cache
+        await redis_1.redisConnection.setex(cacheKey, CACHE_TTL, JSON.stringify(response));
+        res.json(response);
     }
     catch (error) {
         console.error('Get properties error:', error);
@@ -71,6 +90,7 @@ const createProperty = async (req, res) => {
                 // in case they come in differently, though Prisma handles types strictly
             }
         });
+        await invalidatePropertyCache();
         res.json({ success: true, data: property });
     }
     catch (error) {
@@ -87,6 +107,7 @@ const updateProperty = async (req, res) => {
             where: { id },
             data
         });
+        await invalidatePropertyCache();
         res.json({ success: true, data: property });
     }
     catch (error) {
@@ -99,6 +120,7 @@ const deleteProperty = async (req, res) => {
     try {
         const { id } = req.params;
         await prisma_1.default.property.delete({ where: { id } });
+        await invalidatePropertyCache();
         res.json({ success: true, message: 'Property deleted' });
     }
     catch (error) {

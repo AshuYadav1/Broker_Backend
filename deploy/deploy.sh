@@ -49,7 +49,7 @@ ssh "$VPS_USER@$VPS_IP" << 'EOF'
   npm exec prisma generate
 
   # Run DB Schema Sync (Using db push as migrations are not used)
-  npm exec prisma db push --accept-data-loss
+  npx prisma db push --accept-data-loss
 
   # Restart PM2 (Server + Worker)
   pm2 reload video-server || pm2 start dist/server.js --name video-server
@@ -60,7 +60,7 @@ ssh "$VPS_USER@$VPS_IP" << 'EOF'
   # WARNING: Do NOT overwrite nginx.conf automatically as it wipes SSL certs!
   # sudo cp deploy/nginx.conf /etc/nginx/nginx.conf
   echo "⚠️ Skipping Nginx Config overwrite to preserve SSL/HTTPS."
-  echo "👉 If you need to update Nginx, edit /etc/nginx/nginx.conf on the server manually."
+  echo "👉 If you need to update Nginx, edit /etc/nginx/sites-available/default on the server manually."
   # Fix Permissions for Static Files (Critical for Nginx 404)
   sudo chmod -R 755 /var/www/video-server/public
 

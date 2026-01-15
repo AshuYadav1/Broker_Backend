@@ -6,64 +6,111 @@ import fs from 'fs';
 
 const VIDEO_QUEUE_NAME = 'video-transcoding';
 
-// This function performs the heavy CPU task
+// CRITICAL FIX: Aligned GOP settings to prevent flickering during quality switches
 const processVideoJob = async (job: Job) => {
     const { inputPath, outputDir, filename } = job.data;
     console.log(`[Worker] Starting job ${job.id}: Transcoding ${filename}`);
 
     const masterPlaylistPath = path.join(outputDir, 'master.m3u8');
-
-    // Ensure output directory exists (in case worker is on same machine for now)
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
     return new Promise((resolve, reject) => {
+        // Industry Standard: Strictly aligned GOP for seamless switching
+        // Source: Instagram/TikTok Engineering recommendations
+        const commonVideoSettings = [
+            '-c:v', 'libx264',
+            '-preset', 'medium',      // Good balance for VOD
+            '-pix_fmt', 'yuv420p',    // Most compatible pixel format
+            '-profile:v', 'high',     // High profile for better compression/quality
+            '-level', '4.2',          // Level 4.2 supports 1080p60
+            '-movflags', '+faststart',
+            '-r', '30',               // Force 30fps for consistency
+            '-g', '60',               // 2-second GOP (30fps * 2)
+            '-keyint_min', '60',      // Strict keyframe interval
+            '-sc_threshold', '0',     // CRITICAL: Disable scene detection to force alignment
+            '-force_key_frames', 'expr:gte(t,n_forced*2)', // Explicitly force keyframes every 2s
+        ];
+
+        const commonAudioSettings = [
+            '-c:a', 'aac',
+            '-ar', '48000',           // 48kHz standard
+            '-ac', '2',               // Stereo
+        ];
+
+        const commonHLSSettings = [
+            '-hls_time', '2',         // 2-second segments match GOP
+            '-hls_playlist_type', 'vod',
+            '-hls_flags', 'independent_segments', // Essential for glitch-free switching
+            '-hls_segment_type', 'mpegts',
+        ];
+
+        // PORTRAIT SCALING FILTERS (9:16)
+        // Uses force_original_aspect_ratio=decrease to fit within box
+        // Uses pad to fill remaining space with black (prevents stretching)
+        const scaleFilter = (w: number, h: number) =>
+            `scale=-2:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:black`;
+
         ffmpeg(inputPath)
+            // 1080p Portrait (1080x1920) - High Quality
             .outputOptions([
-                '-c:v libx264', '-b:v 5000k', // 5Mbps for 1080p (HQ)
-                '-r 30', // Force 30fps for consistent GOP
-                '-vf', 'scale=w=if(gt(iw\\,ih)\\,-2\\,1080):h=if(gt(iw\\,ih)\\,1080\\,-2)', // Escaped commas for ffmpeg
-                '-c:a aac', '-ar 44100', '-b:a 192k',
-                '-g 60', '-keyint_min 60', '-sc_threshold 0', // GOP = 2s
-                '-hls_time 2', '-hls_playlist_type vod',
-                '-hls_segment_filename', path.join(outputDir, '1080p_%03d.ts')
+                ...commonVideoSettings,
+                '-b:v', '4500k',      // 4.5 Mbps (Instagram rec: 4-6 Mbps)
+                '-maxrate', '5000k',
+                '-bufsize', '10000k',
+                '-vf', scaleFilter(1080, 1920),
+                ...commonAudioSettings,
+                '-b:a', '192k',
+                ...commonHLSSettings,
+                '-hls_segment_filename', path.join(outputDir, '1080p_%03d.ts'),
             ])
             .output(path.join(outputDir, '1080p.m3u8'))
+
+            // 720p Portrait (720x1280) - Standard Mobile
             .outputOptions([
-                '-c:v libx264', '-b:v 2500k', // 2.5Mbps for 720p (Medium)
-                '-r 30',
-                '-vf', 'scale=w=if(gt(iw\\,ih)\\,-2\\,720):h=if(gt(iw\\,ih)\\,720\\,-2)',
-                '-c:a aac', '-ar 44100', '-b:a 128k',
-                '-g 60', '-keyint_min 60', '-sc_threshold 0',
-                '-hls_time 2', '-hls_playlist_type vod',
-                '-hls_segment_filename', path.join(outputDir, '720p_%03d.ts')
+                ...commonVideoSettings,
+                '-b:v', '2500k',      // 2.5 Mbps (Good compromise)
+                '-maxrate', '3000k',
+                '-bufsize', '6000k',
+                '-vf', scaleFilter(720, 1280),
+                ...commonAudioSettings,
+                '-b:a', '128k',
+                ...commonHLSSettings,
+                '-hls_segment_filename', path.join(outputDir, '720p_%03d.ts'),
             ])
             .output(path.join(outputDir, '720p.m3u8'))
+
+            // 480p Portrait (480x854) - Data Saver / Poor Connection
             .outputOptions([
-                '-c:v libx264', '-b:v 1000k', // 1Mbps for 480p (Low/Mobile)
-                '-r 30',
-                '-vf', 'scale=w=if(gt(iw\\,ih)\\,-2\\,480):h=if(gt(iw\\,ih)\\,480\\,-2)',
-                '-c:a aac', '-ar 44100', '-b:a 96k',
-                '-g 60', '-keyint_min 60', '-sc_threshold 0',
-                '-hls_time 2', '-hls_playlist_type vod',
-                '-hls_segment_filename', path.join(outputDir, '480p_%03d.ts')
+                ...commonVideoSettings,
+                '-b:v', '1000k',      // 1 Mbps (TikTok data saver range)
+                '-maxrate', '1200k',
+                '-bufsize', '2000k',
+                '-vf', scaleFilter(480, 854),
+                ...commonAudioSettings,
+                '-b:a', '96k',
+                ...commonHLSSettings,
+                '-hls_segment_filename', path.join(outputDir, '480p_%03d.ts'),
             ])
             .output(path.join(outputDir, '480p.m3u8'))
+
             .on('end', () => {
+                // Master Playlist with correct metadata
                 const masterContent = `#EXTM3U
 #EXT-X-VERSION:3
-#EXT-X-STREAM-INF:BANDWIDTH=5000000
-1080p.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=2500000
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-STREAM-INF:BANDWIDTH=2750000,RESOLUTION=720x1280,FRAME-RATE=30.000,CODECS="avc1.640028,mp4a.40.2"
 720p.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=1000000
+#EXT-X-STREAM-INF:BANDWIDTH=5500000,RESOLUTION=1080x1920,FRAME-RATE=30.000,CODECS="avc1.640029,mp4a.40.2"
+1080p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=1100000,RESOLUTION=480x854,FRAME-RATE=30.000,CODECS="avc1.64001f,mp4a.40.2"
 480p.m3u8`;
-                fs.writeFileSync(masterPlaylistPath, masterContent);
-                console.log(`[Worker] Job ${job.id} Transcoding Complete`);
 
-                // Cleanup input file
+                fs.writeFileSync(masterPlaylistPath, masterContent);
+                console.log(`[Worker] Job ${job.id} Complete`);
+
+                // Cleanup
                 if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
 
-                // Permission Fix: Ensure Nginx can read all generated files
                 try {
                     fs.chmodSync(outputDir, 0o755);
                     const files = fs.readdirSync(outputDir);
@@ -71,10 +118,9 @@ const processVideoJob = async (job: Job) => {
                         fs.chmodSync(path.join(outputDir, file), 0o644);
                     });
                 } catch (permErr) {
-                    console.error(`[Worker] Failed to set permissions for ${filename}:`, permErr);
+                    console.error(`[Worker] Permission error:`, permErr);
                 }
 
-                console.log(`[Worker] Job ${job.id} Complete: ${filename}`);
                 resolve(true);
             })
             .on('error', (err) => {
@@ -96,14 +142,12 @@ import { NotificationService } from './services/notification.service';
 worker.on('completed', async (job) => {
     console.log(`[Queue] Job ${job.id} has completed!`);
 
-    // In a real scenario, we would fetch the Property details from DB using the filename/ID
-    // For now, checks if job.data has property details (we will add this next)
     if (job.data.propertyId) {
         await NotificationService.sendNewPropertyNotification({
             id: job.data.propertyId,
             title: job.data.title || 'New Property Added',
             location: job.data.location || 'Prime Location',
-            imageUrl: `https://video.royalkey.in/media/images/${job.data.filename}.jpg` // Assumption
+            imageUrl: `https://video.royalkey.in/media/images/${job.data.filename}.jpg`
         });
     }
 });

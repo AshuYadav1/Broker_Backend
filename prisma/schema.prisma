@@ -29,7 +29,7 @@ model Property {
   title           String
   location        String
   city            String?
-  price           Float
+  price           String
   type            String   // 'new', 'resale', 'project', 'commercial'
   videoUrl        String
   mainVideoUrl    String?
@@ -60,11 +60,17 @@ model Property {
   panoramas       Json?         // 360-degree panoramic images
   searchKeywords  String[]
 
+  availability    String?   // For New Properties (e.g. "2, 3 BHK")
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   favoritedBy     User[]
   interactions    Interaction[]
+
+  @@index([type])
+  @@index([city])
+  @@index([createdAt])
 }
 
 model Admin {

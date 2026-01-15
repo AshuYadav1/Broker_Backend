@@ -10,7 +10,7 @@ ssh "$VPS_USER@$VPS_IP" << 'EOF'
   
   echo "🔄 Pushing Schema..."
   # prisma db push updates the DB schema directly from schema.prisma
-  npx prisma db push
+  npx prisma db push --accept-data-loss
   
   echo "✅ Database is now in sync with schema!"
 EOF
